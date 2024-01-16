@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JR北海道運行情報（非公式）</title>
+</head>
+<body>
+    <nav>
+        <p>JR北海道運行情報（非公式）</p>
+        <p>公式サイトが落ちている場合でも運行情報を配信しているサーバーが生きていれば動作します。</p>
+    </nav>
+    <div id="info">
+        <!-- タブ切り替えボタン -->
+        <div class="tab-switcher" onclick="showTab('today')">今日</div>
+        <div class="tab-switcher" onclick="showTab('tomorrow')">明日</div>
+    
+        <!-- タブのコンテンツ -->
+        <div id="today" class="tab active-tab">
+          <!-- 今日のコンテンツをここに追加 -->
+        </div>
+    
+        <div id="tomorrow" class="tab">
+          <!-- 明日のコンテンツをここに追加 -->
+        </div>
+      </div>
+<script>
+    //urlパラメーターを取得する関数
+    function getParam(name) {
+        const url = window.location.href;
+        const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+        const results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+    let area_param = getParam('area') || '1';
+// JSONデータを取得する関数
+async function fetchData(url) {
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('データの取得に失敗しました', error);
+  }
+}
+
+// JSONデータを表示する関数
+function displayData(data) {
+  console.log(data);
+  genhtml(data.today, 'today');
+  genhtml(data.tomorrow, 'tomorrow');
+}
+/*
+{
+    "time": "2024年01月16日 14時58分現在",
+    "today": {
+        "dateText": "1/16",
+        "areaStatus": {
+            "spo": 1,
+            "doo": 1,
+            "donan": 1,
+            "dohoku": 1,
+            "doto": 0,
+            "shin": 0
+        },
+        "gaikyo": [
+            {
+                "time": "2024年01月16日 13時28分現在",
+                "title": "【雪による列車への影響について】                                                                                                        ",
+                "honbun": "冬型の気圧配置が強まり暴風雪が発生していることから、札幌圏の各方面の一部列車に運休や遅れが発生しています。なお、札幌圏では、各線区とも運転見合わせは行わず、運転本数を減らして運行を確保しています。<BR>札幌圏以外では、以下の区間で運転を見合わせています。<BR><BR>【1/16　運転見合わせ】<BR>・函館線　小樽～長万部間：終日<BR>・宗谷線　名寄→稚内間（下り）：始発から15時頃まで<BR>　　　　　稚内→名寄間（上り）：始発から18時頃まで<BR>※天候状況によっては、運休本数が増える可能性があります。<BR><BR><a href=\"https://www3.jrhokkaido.co.jp/webunkou/stationlist.html\">★「各駅運行情報」では、本日と明日の駅別出発時刻表から運休列車を確認できます。</a>",
+                "eikyo": {
+                    "spo": 1,
+                    "doo": 1,
+                    "donan": 1,
+                    "dohoku": 1,
+                    "doto": 0
+                }
+            }
+        ],
+        "areaComments": [],
+        "senkuStatus": {
+            "express": 1,
+            "airport": 1,
+            "hakochise": 1,
+            "hakodateLiner": 0,
+            "hakodate": 0,
+            "gakuen": 1,
+            "sekisho": 0,
+            "muroran": 0,
+            "nemuro": 0,
+            "hidaka": 0,
+            "soya": 0,
+            "sekihoku": 0,
+            "furano": 0,
+            "rumoi": 0,
+            "senmo": 0,
+            "hanasaki": 0
+        }
+    },
+    "tomorrow": {
+        "dateText": "1/17",
+        "areaStatus": {
+            "spo": 1,
+            "doo": 1,
+            "donan": 0,
+            "dohoku": 0,
+            "doto": 0,
+            "shin": 0
+        },
+        "gaikyo": [
+            {
+                "time": "2024年01月16日 14時20分現在",
+                "title": "【雪による列車への影響について】",
+                "honbun": "1/15からの大雪の影響により、1/17の一部列車に運休が発生します。",
+                "eikyo": {
+                    "spo": 1,
+                    "doo": 1,
+                    "donan": 0,
+                    "dohoku": 0,
+                    "doto": 0
+                }
+            }
+        ],
+        "areaComments": [],
+        "senkuStatus": {
+            "express": 0,
+            "airport": 0,
+            "hakochise": 1,
+            "hakodateLiner": 0,
+            "hakodate": 0,
+            "gakuen": 0,
+            "sekisho": 0,
+            "muroran": 0,
+            "nemuro": 0,
+            "hidaka": 0,
+            "soya": 0,
+            "sekihoku": 0,
+            "furano": 0,
+            "rumoi": 0,
+            "senmo": 0,
+            "hanasaki": 0
+        }
+    }
+}
+*/
+// HTML生成関数
+function genhtml(datas, id) {
+    let html_str = '';
+    
+    //タイトルを追加
+    html_str += `<p>${datas.dateText}の運行状況</p>`;
+    // 各エリアごとの運行状況
+    html_str += '<table>';
+
+    // 列の題名を追加
+    html_str += '<tr>';
+    let cnt=1;
+    for (let [key, value] of Object.entries(datas.areaStatus)) {
+        if (key === 'doo') key = '道央';
+        else if (key === 'dohoku') key = '道北';
+        else if (key === 'donan') key = '道南';
+        else if (key === 'doto') key = '道東';
+        else if (key === 'shin') key = '新幹線';
+        else if (key === 'spo') key = '札幌圏';
+        if(cnt!=6){
+            html_str += '<th><a href="jr-hokkaido.html?area='+cnt + '">' + key  +'</a></th>';
+        }else{
+            html_str += '<th>' + key  +'</th>';
+        }
+        cnt++;
+    }
+    html_str += '</tr>';
+
+    // 行の題名とデータを追加
+    html_str += '<tr>';
+    for (let [area, status] of Object.entries(datas.areaStatus)) {
+        if (status === 0) status = '◎';
+        else if (status === 1) status = '⚠';
+        html_str += '<td>' + status + '</td>';
+    }
+    html_str += '</tr>';
+
+    html_str += '</table>';
+    //記号の説明を追加
+    html_str += '<div>◎：平常運転<br>⚠：運休・３０分以上の遅延・運転見合わせが発生</div>';
+    //概況(gaikyo)を追加
+    html_str += `
+    <p>概況</p>
+    <div>${datas.gaikyo[0].title}</div>
+    <div>${datas.gaikyo[0].honbun}</div>
+    `;    
+    //タイトルを追加
+    html_str += '<p>各路線の状況</p>';
+    //各路線の状況(senkuStatus)を追加
+    html_str += '<table>';
+
+    // 列の題名を追加
+    html_str += '<tr>';
+        
+    let lines={};
+    switch(area_param){
+        case "1":
+            lines = {
+                "express": "特急",
+                "airport": "快速エアポート",
+                "hakochise": "函館線・千歳線",
+                "gakuen": "学園都市線"
+            };
+            break;
+        case "2":
+            lines = {
+                "express": "特急",
+                "airport": "快速エアポート",
+                "hakochise": "函館線・千歳線",
+                "gakuen": "学園都市線",
+                "muroran": "室蘭線",
+                "hidaka": "日高線"
+            };
+            break;
+        case "3":
+            lines = {
+                "express": "特急",
+                "hakodateLiner": "函館ライナー",
+                "hakodate": "函館線"
+            };
+            break;
+        case "4":
+            lines = {
+                "express": "特急",
+                "soya": "宗谷線",
+                "sekihoku": "石北線",
+                "furano": "富良野線",
+                "rumoi": "留萌線"
+            };
+            break;
+        case "5":
+            lines = {
+                "express": "特急",
+                "sekisho": "石勝線",
+                "nemuro": "根室線",
+                "hanasaki": "根室線（花咲線）",
+                "senmo": "釧網線"
+            };
+            break;
+            
+
+    }
+
+    
+    for (let [key, value] of Object.entries(lines)) {
+        html_str += '<th>' + value + '</th>';
+    }
+    html_str += '</tr>';
+
+    // 行の題名とデータを追加 linesのキー名として存在するもののみ
+    html_str += '<tr>';
+    for (let [line, status] of Object.entries(datas.senkuStatus)) {
+        if (status === 0) status = '◎';
+        else if (status === 1) status = '⚠';
+        if (lines[line] !== undefined) html_str += '<td>' + status + '</td>';
+    }
+    html_str += '</tr>';
+
+    html_str += '</table>';
+    //記号の説明を追加
+    html_str += '<div>◎：平常運転<br>⚠：運休・３０分以上の遅延・運転見合わせが発生</div>';
+    document.getElementById(id).innerHTML += html_str;
+}
+
+// JSONデータを取得して表示するメインの処理
+const apiUrl = `api/get_data.php?url=https://www3.jrhokkaido.co.jp/webunkou/json/area/area_0${area_param}.json`;
+fetchData(apiUrl)
+  .then(displayData);
+
+    // タブの表示/非表示を切り替える関数
+    function showTab(tabName) {
+      // すべてのタブを非表示にする
+      var tabs = document.querySelectorAll('.tab');
+      tabs.forEach(function(tab) {
+        tab.classList.remove('active-tab');
+      });
+
+      // 選択されたタブを表示する
+      var selectedTab = document.getElementById(tabName);
+      selectedTab.classList.add('active-tab');
+    }
+</script>
+<style>
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+#info {
+    padding: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+p {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+div {
+    margin-bottom: 10px;
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+/* Responsive design for small screens */
+@media only screen and (max-width: 600px) {
+    th, td {
+        font-size: 12px;
+        padding: 6px;
+    }
+    
+    p {
+        font-size: 14px;
+    }
+
+    div {
+        font-size: 14px;
+    }
+}
+    /* タブのスタイル */
+    .tab {
+      display: none;
+    }
+
+    /* 選択されたタブのスタイル */
+    .active-tab {
+      display: block;
+    }
+
+    /* タブ切り替え用のスタイル */
+    .tab-switcher {
+      cursor: pointer;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    nav{
+        background-color: #007bff;
+        color: white;
+        padding: 10px;
+    }
+</style>
+</body>
+</html>
